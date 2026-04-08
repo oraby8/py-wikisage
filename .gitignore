@@ -12,7 +12,8 @@ build/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-
+.cache/
+.benchmarks/
 # --- Env & secrets ---
 .env
 .env.*
@@ -39,3 +40,5 @@ logs/
 *.swo
 config.yaml
 src/py_wikisage/__pycache__/*
+tests/__pycache__/*
+personal_test/
