@@ -1,7 +1,13 @@
 import typer
 from rich.console import Console
 from pathlib import Path
-from py_wikisage.core.config import create_default_config
+from py_wikisage.core.config import create_default_config, load_config
+from py_wikisage.core.compiler import process_raw_documents
+from py_wikisage.core.qmd_wrapper import (
+    check_qmd_installed,
+    init_qmd_collection,
+    update_qmd_index,
+)
 
 app = typer.Typer(
     help="Py-WikiSage: LLM-powered Markdown wiki compiler and search engine"
@@ -34,7 +40,26 @@ def init():
 @app.command()
 def compile():
     """Compile raw documents into the wiki"""
-    console.print("[yellow]compile command is not implemented yet[/yellow]")
+    cwd = Path.cwd()
+    raw_dir = cwd / "raw"
+    wiki_dir = cwd / "wiki"
+
+    config = load_config(cwd)
+
+    console.print("[blue]Processing raw documents and generating wiki...[/blue]")
+    process_raw_documents(raw_dir, wiki_dir, config)
+
+    if check_qmd_installed():
+        console.print("[blue]Updating search index with qmd...[/blue]")
+        # Init collection if needed
+        init_qmd_collection(str(wiki_dir))
+        # Update and embed
+        update_qmd_index()
+        console.print("[green]Compiled and indexed successfully![/green]")
+    else:
+        console.print(
+            "[yellow]Compiled successfully, but qmd is not installed. Skipping search indexing.[/yellow]"
+        )
 
 
 @app.command()

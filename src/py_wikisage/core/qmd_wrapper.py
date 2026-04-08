@@ -22,6 +22,12 @@ def init_qmd_collection(wiki_path: str):
     )
 
 
+def update_qmd_index():
+    """Run qmd update and embed to refresh the index."""
+    subprocess.run(["qmd", "update"], capture_output=True, check=False)
+    subprocess.run(["qmd", "embed"], capture_output=True, check=False)
+
+
 def require_qmd():
     """Ensure qmd is installed, or print instructions and exit."""
     if not check_qmd_installed():
