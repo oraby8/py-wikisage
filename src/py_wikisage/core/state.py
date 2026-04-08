@@ -3,11 +3,14 @@ from datetime import datetime
 
 
 def log_action(wiki_dir: Path, action: str, details: str) -> None:
+    """Append a grep-friendly line: ## [YYYY-MM-DD] action | details"""
     log_file = wiki_dir / "log.md"
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_line = f"## [{timestamp}] {action} | {details}\n"
+    day = datetime.now().strftime("%Y-%m-%d")
+    clock = datetime.now().strftime("%H:%M:%S")
+    log_line = f"## [{day}] {action} | {details} ({clock})\n"
 
-    with open(log_file, "a") as f:
+    wiki_dir.mkdir(parents=True, exist_ok=True)
+    with open(log_file, "a", encoding="utf-8") as f:
         f.write(log_line)
 
 

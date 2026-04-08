@@ -14,18 +14,15 @@ runner = CliRunner()
 def test_compile_command(mock_subprocess, mock_completion, tmp_path: Path):
     os.chdir(tmp_path)
 
-    # Mock subprocess success
     mock_subprocess.return_value.returncode = 0
     raw_dir = tmp_path / "raw"
     wiki_dir = tmp_path / "wiki"
     raw_dir.mkdir()
     wiki_dir.mkdir()
 
-    # Create a test config
     config_file = tmp_path / "config.yaml"
     config_file.write_text("llm:\n  provider: openai\n  model: gpt-4o-mini")
 
-    # Create dummy raw documents in different categories
     papers_dir = raw_dir / "papers"
     papers_dir.mkdir()
     paper_doc = papers_dir / "paper.txt"
@@ -36,7 +33,6 @@ def test_compile_command(mock_subprocess, mock_completion, tmp_path: Path):
     clip_doc = clips_dir / "clip.md"
     clip_doc.write_text("Web clip about Concept B.")
 
-    # Mock litellm response
     mock_response_1 = MagicMock()
     mock_response_1.choices = [
         MagicMock(
@@ -68,15 +64,12 @@ def test_compile_command(mock_subprocess, mock_completion, tmp_path: Path):
     ]
     mock_completion.side_effect = [mock_response_1, mock_response_2, mock_response_3]
 
-    # Mock writing to just prevent failing if we remove write logic
     result = runner.invoke(app, ["compile"])
 
     assert result.exit_code == 0
 
-    # Verify litellm completion was called three times (twice for extract, once for synthesis)
     assert mock_completion.call_count == 3
 
-    # Verify the appropriate prompts were passed
     args_list = mock_completion.call_args_list
     messages_1 = args_list[0].kwargs["messages"][0]["content"]
     messages_2 = args_list[1].kwargs["messages"][0]["content"]
@@ -91,38 +84,41 @@ def test_compile_command(mock_subprocess, mock_completion, tmp_path: Path):
     )
 
 
-@patch("py_wikisage.core.prompts.Path.exists")
-@patch("py_wikisage.core.prompts.Path.read_text")
-def test_get_extraction_prompt(mock_read_text, mock_exists):
+@patch("py_wikisage.core.prompts._read_package_text")
+def test_get_extraction_prompt(mock_read):
     from py_wikisage.core.prompts import get_extraction_prompt
 
-    # Setup mock to return False for the specific category but True for fallback
+    def specific(rel: str):
+        if rel == "prompts/extract_papers.txt":
+            return "Extract papers prompt"
+        return None
 
-    # If the file exists
-    mock_exists.side_effect = [True]
-    mock_read_text.return_value = "Extract papers prompt"
+    mock_read.side_effect = specific
     assert get_extraction_prompt("papers") == "Extract papers prompt"
 
-    # If specific doesn't exist, but fallback exists
-    mock_exists.side_effect = [False, True]
-    mock_read_text.return_value = "Extract concepts prompt"
+    def fallback(rel: str):
+        if rel == "prompts/extract_papers.txt":
+            return None
+        if rel == "prompts/extract_concepts.txt":
+            return "Extract concepts prompt"
+        return None
+
+    mock_read.side_effect = fallback
     assert get_extraction_prompt("papers") == "Extract concepts prompt"
 
-    # If neither exists
-    mock_exists.side_effect = [False, False]
+    mock_read.side_effect = None
+    mock_read.return_value = None
     assert "extract the key concepts" in get_extraction_prompt("papers").lower()
 
 
-@patch("py_wikisage.core.prompts.Path.exists")
-@patch("py_wikisage.core.prompts.Path.read_text")
-def test_get_synthesis_prompt(mock_read_text, mock_exists):
+@patch("py_wikisage.core.prompts._read_package_text")
+def test_get_synthesis_prompt(mock_read):
     from py_wikisage.core.prompts import get_synthesis_prompt
 
-    mock_exists.return_value = True
-    mock_read_text.return_value = "Synthesis prompt"
+    mock_read.return_value = "Synthesis prompt"
     assert get_synthesis_prompt() == "Synthesis prompt"
 
-    mock_exists.return_value = False
+    mock_read.return_value = None
     assert "write" in get_synthesis_prompt().lower()
 
 
@@ -135,16 +131,13 @@ def test_process_raw_documents_synthesis(mock_completion, mock_extract, tmp_path
     wiki_dir.mkdir()
     config = {"llm": {"provider": "openai", "model": "gpt-4o-mini"}}
 
-    # Create dummy raw documents
     papers_dir = raw_dir / "papers"
     papers_dir.mkdir()
     paper_doc = papers_dir / "paper.txt"
     paper_doc.write_text("Paper content about Concept A.")
 
-    # Mock extract to return dummy concepts
     mock_extract.return_value = [{"title": "Concept A", "content": "Extracted A"}]
 
-    # Mock completion for synthesize pass
     mock_response = MagicMock()
     mock_response.choices = [
         MagicMock(
@@ -159,10 +152,9 @@ def test_process_raw_documents_synthesis(mock_completion, mock_extract, tmp_path
 
     result = process_raw_documents(raw_dir, wiki_dir, config)
 
-    # After processing, wiki_dir should contain Concept A.md
     assert (wiki_dir / "Concept A.md").exists()
     assert (wiki_dir / "Concept A.md").read_text() == "Final Article A"
-    assert result == [{"title": "Concept A", "content": "Final Article A"}]
+    assert result.articles == [{"title": "Concept A", "content": "Final Article A"}]
 
 
 @patch("py_wikisage.core.compiler.is_file_processed")
@@ -214,11 +206,8 @@ def test_incremental_ingestion(
 
     process_raw_documents(raw_dir, wiki_dir, config)
 
-    # Assertions
     assert mock_extract.call_count == 1
     call_args = mock_extract.call_args[0]
-    assert (
-        call_args[1] == "paper2.txt"
-    )  # filename is 2nd positional arg: (content, filename, category, config)
+    assert call_args[1] == "paper2.txt"
 
     mock_log_action.assert_called_once_with(wiki_dir, "ingest", "paper2.txt")

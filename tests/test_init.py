@@ -17,3 +17,4 @@ def test_init_command(tmp_path: Path):
     assert (tmp_path / "raw").exists()
     assert (tmp_path / "wiki").exists()
     assert (tmp_path / "config.yaml").exists()
+    assert (tmp_path / "AGENTS.md").exists()

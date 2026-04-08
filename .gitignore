@@ -34,6 +34,8 @@ logs/
 # --- OS & editors ---
 .DS_Store
 .idea/
+.worktrees/*
+.worktrees/
 .vscode/*
 !.vscode/extensions.json
 *.swp

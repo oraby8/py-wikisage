@@ -1,4 +1,4 @@
-from pathlib import Path
+import importlib.resources
 
 DEFAULT_EXTRACTION_PROMPT = """
 You are a knowledge extraction system. Analyze the following text and extract the key concepts, entities, and topics.
@@ -24,39 +24,38 @@ Raw Concepts:
 """
 
 
+def _read_package_text(relative: str) -> str | None:
+    """Load a UTF-8 text file from the installed py_wikisage package."""
+    try:
+        root = importlib.resources.files("py_wikisage")
+    except (ModuleNotFoundError, TypeError):
+        return None
+    path = root / relative
+    if not path.is_file():
+        return None
+    return path.read_text(encoding="utf-8")
+
+
 def get_extraction_prompt(category: str) -> str:
     """
-    Get the extraction prompt for a specific category.
-    Looks for prompts/extract_{category}.txt, falls back to prompts/extract_concepts.txt,
-    and finally falls back to a hardcoded default.
+    Load extraction prompt for category from package prompts/.
+    Tries extract_{category}.txt, then extract_concepts.txt, then default string.
     """
-    cwd = Path.cwd()
-    prompts_dir = cwd / "src" / "py_wikisage" / "prompts"
+    specific = _read_package_text(f"prompts/extract_{category}.txt")
+    if specific is not None and specific.strip():
+        return specific
 
-    # Try specific prompt
-    specific_prompt_path = prompts_dir / f"extract_{category}.txt"
-    if specific_prompt_path.exists():
-        return specific_prompt_path.read_text()
+    generic = _read_package_text("prompts/extract_concepts.txt")
+    if generic is not None and generic.strip():
+        return generic
 
-    # Try generic fallback
-    generic_prompt_path = prompts_dir / "extract_concepts.txt"
-    if generic_prompt_path.exists():
-        return generic_prompt_path.read_text()
-
-    # Hardcoded fallback
     return DEFAULT_EXTRACTION_PROMPT
 
 
 def get_synthesis_prompt() -> str:
-    """
-    Get the synthesis prompt.
-    Looks for prompts/write_article.txt, falls back to a hardcoded default.
-    """
-    cwd = Path.cwd()
-    prompts_dir = cwd / "src" / "py_wikisage" / "prompts"
-
-    synthesis_prompt_path = prompts_dir / "write_article.txt"
-    if synthesis_prompt_path.exists():
-        return synthesis_prompt_path.read_text()
+    """Load synthesis prompt from prompts/write_article.txt or built-in default."""
+    text = _read_package_text("prompts/write_article.txt")
+    if text is not None and text.strip():
+        return text
 
     return DEFAULT_SYNTHESIS_PROMPT
