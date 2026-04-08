@@ -17,4 +17,4 @@ def test_app_help():
 def test_app_init():
     result = runner.invoke(app, ["init"])
     assert result.exit_code == 0
-    assert "init command is not implemented yet" in result.stdout
+    assert "Initialized py-wikisage project" in result.stdout
