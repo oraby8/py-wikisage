@@ -6,6 +6,7 @@ from litellm import completion
 from rich.console import Console
 from py_wikisage.core.utility import read_document
 from py_wikisage.core.prompts import get_extraction_prompt, get_synthesis_prompt
+from py_wikisage.core.state import is_file_processed, log_action
 
 console = Console()
 
@@ -135,17 +136,25 @@ def process_raw_documents(raw_dir: Path, wiki_dir: Path, config: dict):
 
     for file_path in raw_dir.glob("**/*"):
         if file_path.is_file() and file_path.suffix in [".txt", ".md", ".pdf"]:
+            if is_file_processed(wiki_dir, file_path.name):
+                console.print(
+                    f"[dim]Skipping already processed document: {file_path.name}[/dim]"
+                )
+                continue
+
             category = file_path.parent.name
             console.print(
                 f"Processing document: [bold]{file_path.name}[/bold] (Category: {category})"
             )
 
             content = read_document(file_path)
+
             if content:
                 concepts = extract_concepts_from_document(
                     content, file_path.name, category, config
                 )
                 all_extracted_concepts.extend(concepts)
+                log_action(wiki_dir, "ingest", file_path.name)
             else:
                 console.print(f"[red]No content found in {file_path}[/red]")
 

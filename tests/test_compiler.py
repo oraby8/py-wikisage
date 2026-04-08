@@ -157,11 +157,68 @@ def test_process_raw_documents_synthesis(mock_completion, mock_extract, tmp_path
     ]
     mock_completion.return_value = mock_response
 
-    from py_wikisage.core.compiler import process_raw_documents
-
     result = process_raw_documents(raw_dir, wiki_dir, config)
 
     # After processing, wiki_dir should contain Concept A.md
     assert (wiki_dir / "Concept A.md").exists()
     assert (wiki_dir / "Concept A.md").read_text() == "Final Article A"
     assert result == [{"title": "Concept A", "content": "Final Article A"}]
+
+
+@patch("py_wikisage.core.compiler.is_file_processed")
+@patch("py_wikisage.core.compiler.log_action")
+@patch("py_wikisage.core.compiler.extract_concepts_from_document")
+@patch("py_wikisage.core.compiler.completion")
+def test_incremental_ingestion(
+    mock_completion,
+    mock_extract,
+    mock_log_action,
+    mock_is_file_processed,
+    tmp_path: Path,
+):
+    raw_dir = tmp_path / "raw"
+    wiki_dir = tmp_path / "wiki"
+    raw_dir.mkdir()
+    wiki_dir.mkdir()
+    config = {"llm": {"provider": "openai", "model": "gpt-4o-mini"}}
+
+    papers_dir = raw_dir / "papers"
+    papers_dir.mkdir()
+
+    file1 = papers_dir / "paper1.txt"
+    file1.write_text("Processed.")
+
+    file2 = papers_dir / "paper2.txt"
+    file2.write_text("Unprocessed.")
+
+    def mock_is_processed(wd, fname):
+        return fname == "paper1.txt"
+
+    mock_is_file_processed.side_effect = mock_is_processed
+
+    mock_extract.return_value = [{"title": "Concept B", "content": "Extracted B"}]
+
+    mock_response = MagicMock()
+    mock_response.choices = [
+        MagicMock(
+            message=MagicMock(
+                content=json.dumps(
+                    [{"title": "Concept B", "content": "Final Article B"}]
+                )
+            )
+        )
+    ]
+    mock_completion.return_value = mock_response
+
+    from py_wikisage.core.compiler import process_raw_documents
+
+    process_raw_documents(raw_dir, wiki_dir, config)
+
+    # Assertions
+    assert mock_extract.call_count == 1
+    call_args = mock_extract.call_args[0]
+    assert (
+        call_args[1] == "paper2.txt"
+    )  # filename is 2nd positional arg: (content, filename, category, config)
+
+    mock_log_action.assert_called_once_with(wiki_dir, "ingest", "paper2.txt")
