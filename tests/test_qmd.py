@@ -1,4 +1,3 @@
-import subprocess
 from unittest.mock import patch
 from py_wikisage.core.qmd_wrapper import check_qmd_installed, init_qmd_collection
 

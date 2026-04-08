@@ -26,7 +26,7 @@ def init():
     # Create directories
     raw_dir = cwd / "raw"
     wiki_dir = cwd / "wiki"
-    inside_raw_dir = ["assets", "papers", "repos", "web_clips", "experiments"]
+    inside_raw_dir = ["assets", "papers", "repos", "articles", "experiments"]
 
     raw_dir.mkdir(exist_ok=True)
     wiki_dir.mkdir(exist_ok=True)

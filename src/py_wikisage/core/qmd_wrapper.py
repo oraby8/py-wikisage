@@ -48,16 +48,6 @@ def run_query(query: str) -> str:
     return result.stdout.decode("utf-8")
 
 
-def run_query(query: str) -> str:
-    """Execute qmd hybrid query for the given string in the wiki collection."""
-    result = subprocess.run(
-        ["qmd", "query", query, "-c", "wiki"],
-        capture_output=True,
-        check=False,
-    )
-    return result.stdout.decode("utf-8")
-
-
 def require_qmd():
     """Ensure qmd is installed, or print instructions and exit."""
     if not check_qmd_installed():

@@ -1,4 +1,3 @@
-import subprocess
 from unittest.mock import patch
 from py_wikisage.cli import app
 from typer.testing import CliRunner

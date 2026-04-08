@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 DEFAULT_EXTRACTION_PROMPT = """

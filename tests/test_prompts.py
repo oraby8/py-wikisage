@@ -1,5 +1,3 @@
-import os
-from pathlib import Path
 from unittest.mock import patch
 from py_wikisage.core.prompts import get_extraction_prompt, get_synthesis_prompt
 
