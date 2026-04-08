@@ -28,6 +28,36 @@ def update_qmd_index():
     subprocess.run(["qmd", "embed"], capture_output=True, check=False)
 
 
+def run_search(query: str) -> str:
+    """Execute qmd search for the given query in the wiki collection."""
+    result = subprocess.run(
+        ["qmd", "search", query, "-c", "wiki"],
+        capture_output=True,
+        check=False,
+    )
+    return result.stdout.decode("utf-8")
+
+
+def run_query(query: str) -> str:
+    """Execute qmd hybrid query for the given string in the wiki collection."""
+    result = subprocess.run(
+        ["qmd", "query", query, "-c", "wiki"],
+        capture_output=True,
+        check=False,
+    )
+    return result.stdout.decode("utf-8")
+
+
+def run_query(query: str) -> str:
+    """Execute qmd hybrid query for the given string in the wiki collection."""
+    result = subprocess.run(
+        ["qmd", "query", query, "-c", "wiki"],
+        capture_output=True,
+        check=False,
+    )
+    return result.stdout.decode("utf-8")
+
+
 def require_qmd():
     """Ensure qmd is installed, or print instructions and exit."""
     if not check_qmd_installed():

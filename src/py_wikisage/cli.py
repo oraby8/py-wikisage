@@ -7,6 +7,9 @@ from py_wikisage.core.qmd_wrapper import (
     check_qmd_installed,
     init_qmd_collection,
     update_qmd_index,
+    run_search,
+    run_query,
+    require_qmd,
 )
 
 app = typer.Typer(
@@ -65,17 +68,21 @@ def compile():
 @app.command()
 def search(query: str):
     """Search the compiled wiki"""
-    console.print(
-        f"[yellow]search command is not implemented yet for query: {query}[/yellow]"
-    )
+    require_qmd()
+    console.print(f"[blue]Searching wiki for: {query}[/blue]\n")
+    output = run_search(query)
+    # The output is formatted by QMD natively using terminal sequences,
+    # so we just print it as-is or wrap it cleanly.
+    print(output)
 
 
 @app.command()
 def query(query: str):
     """Perform a semantic query against the wiki"""
-    console.print(
-        f"[yellow]query command is not implemented yet for query: {query}[/yellow]"
-    )
+    require_qmd()
+    console.print(f"[blue]Querying wiki for: {query}[/blue]\n")
+    output = run_query(query)
+    print(output)
 
 
 if __name__ == "__main__":
