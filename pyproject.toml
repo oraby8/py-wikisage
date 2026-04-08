@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "py-wikisage"
+version = "0.1.0"
+description = "Compile raw documents into an LLM-generated markdown wiki."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "litellm>=1.0.0",
+    "PyMuPDF>=1.24.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-mock>=3.10.0",
+]
+
+[project.scripts]
+py-wikisage = "py_wikisage.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/py_wikisage"]
