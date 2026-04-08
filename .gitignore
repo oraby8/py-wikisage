@@ -1,0 +1,41 @@
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+*.egg
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Env & secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Local data & databases ---
+*.db
+chroma_db/
+plc_knowledge.db
+rag_db/
+graph_db/
+uploads/
+
+# --- Logs ---
+logs/
+*.log
+
+# --- OS & editors ---
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+config.yaml
+src/py_wikisage/__pycache__/*
