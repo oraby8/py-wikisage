@@ -61,3 +61,53 @@ def test_compile_command(mock_subprocess, mock_completion, tmp_path: Path):
 
     # Verify qmd update and embed were called
     assert mock_subprocess.call_count >= 2
+
+
+@patch("py_wikisage.core.prompts.Path.exists")
+@patch("py_wikisage.core.prompts.Path.read_text")
+def test_get_prompt(mock_read_text, mock_exists):
+    from py_wikisage.core.prompts import get_prompt
+
+    # Test file exists
+    mock_exists.return_value = True
+    mock_read_text.return_value = "Loaded Prompt"
+    assert get_prompt("some_category", "Default") == "Loaded Prompt"
+
+    # Test file does not exist
+    mock_exists.return_value = False
+    assert get_prompt("some_category", "Default") == "Default"
+
+
+@patch("py_wikisage.core.prompts.Path.exists")
+@patch("py_wikisage.core.prompts.Path.read_text")
+def test_get_extraction_prompt(mock_read_text, mock_exists):
+    from py_wikisage.core.prompts import get_extraction_prompt
+
+    # Setup mock to return False for the specific category but True for fallback
+
+    # If the file exists
+    mock_exists.side_effect = [True]
+    mock_read_text.return_value = "Extract papers prompt"
+    assert get_extraction_prompt("papers") == "Extract papers prompt"
+
+    # If specific doesn't exist, but fallback exists
+    mock_exists.side_effect = [False, True]
+    mock_read_text.return_value = "Extract concepts prompt"
+    assert get_extraction_prompt("papers") == "Extract concepts prompt"
+
+    # If neither exists
+    mock_exists.side_effect = [False, False]
+    assert "extract concepts" in get_extraction_prompt("papers").lower()
+
+
+@patch("py_wikisage.core.prompts.Path.exists")
+@patch("py_wikisage.core.prompts.Path.read_text")
+def test_get_synthesis_prompt(mock_read_text, mock_exists):
+    from py_wikisage.core.prompts import get_synthesis_prompt
+
+    mock_exists.return_value = True
+    mock_read_text.return_value = "Synthesis prompt"
+    assert get_synthesis_prompt() == "Synthesis prompt"
+
+    mock_exists.return_value = False
+    assert "write" in get_synthesis_prompt().lower()

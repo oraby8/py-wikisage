@@ -26,10 +26,12 @@ def init():
     # Create directories
     raw_dir = cwd / "raw"
     wiki_dir = cwd / "wiki"
+    inside_raw_dir = ["assets", "papers", "repos", "web_clips", "experiments"]
 
     raw_dir.mkdir(exist_ok=True)
     wiki_dir.mkdir(exist_ok=True)
-
+    for dir in inside_raw_dir:
+        (raw_dir / dir).mkdir(exist_ok=True)
     # Create config
     config_created = create_default_config(cwd)
 

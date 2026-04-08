@@ -4,30 +4,9 @@ import re
 from pathlib import Path
 from litellm import completion
 from rich.console import Console
+from py_wikisage.core.utility import read_document
 
 console = Console()
-
-
-def read_document(file_path: Path) -> str:
-    """Read content from supported document types."""
-    # MVP: support txt and md
-    if file_path.suffix in [".txt", ".md"]:
-        return file_path.read_text()
-    elif file_path.suffix == ".pdf":
-        try:
-            import fitz  # PyMuPDF
-
-            doc = fitz.open(file_path)
-            text = ""
-            for page in doc:
-                text += page.get_text()
-            return text
-        except ImportError:
-            console.print(
-                "[yellow]PyMuPDF not installed, skipping PDF reading.[/yellow]"
-            )
-            return ""
-    return ""
 
 
 def process_raw_documents(raw_dir: Path, wiki_dir: Path, config: dict):
@@ -36,18 +15,34 @@ def process_raw_documents(raw_dir: Path, wiki_dir: Path, config: dict):
         console.print(f"[red]Raw directory {raw_dir} does not exist.[/red]")
         return
 
-    documents_content = []
+    assets_content = []
+    papers_content = []
+    repos_content = []
+    web_clips_content = []
+    experiments_content = []
+
     for file_path in raw_dir.glob("**/*"):
         if file_path.is_file() and file_path.suffix in [".txt", ".md", ".pdf"]:
-            content = read_document(file_path)
+            source_type = file_path.parent.name
+            print(f"Source type: {source_type}")
+            
             if content:
-                documents_content.append(
-                    f"--- Document: {file_path.name} ---\n{content}\n"
-                )
+                if source_type == "assets":
+                    content = read_document(file_path)
+                    assets_content.append(f"--- Document: {file_path.name} ---\n{content}\n")
+                elif source_type == "papers":
+                    content = read_document(file_path)
+                    papers_content.append(f"--- Document: {file_path.name} ---\n{content}\n")
+                elif source_type == "repos":
+                    repos_content.append(f"--- Document: {file_path.name} ---\n{content}\n")
+                elif source_type == "web_clips":
+                    web_clips_content.append(f"--- Document: {file_path.name} ---\n{content}\n")
+                elif source_type == "experiments":
+                    experiments_content.append(f"--- Document: {file_path.name} ---\n{content}\n")
 
-    if not documents_content:
-        console.print("No readable documents found in raw/")
-        return
+            else:
+                console.print(f"[red]No content found in {file_path}[/red]")
+
 
     combined_text = "\n".join(documents_content)
 
@@ -62,15 +57,33 @@ def process_raw_documents(raw_dir: Path, wiki_dir: Path, config: dict):
     {combined_text}
     """
 
-    provider = config.get("llm", {}).get("provider", "openai")
-    model_name = config.get("llm", {}).get("model", "gpt-4o-mini")
+    llm_config = config.get("llm", {})
+    provider = llm_config.get("provider", "openai")
+    model_name = llm_config.get("model", "gpt-4o-mini")
     model_id = f"{provider}/{model_name}" if provider != "openai" else model_name
+    # Support both direct API key and env-var indirection from config.
+    # - llm.api_key: literal key string
+    # - llm.api_key_env: env var name that contains the key
+    api_key = llm_config.get("api_key")
+    api_key_env = llm_config.get("api_key_env")
+    if not api_key and api_key_env:
+        api_key = os.getenv(api_key_env)
 
     try:
+        completion_kwargs = {
+            "model": model_id,
+            "messages": [{"role": "user", "content": prompt}],
+            "response_format": {"type": "json_object"},
+        }
+        if api_key:
+            completion_kwargs["api_key"] = api_key
+        elif provider == "gemini":
+            console.print(
+                "[yellow]No API key resolved. Set llm.api_key or export the env var named in llm.api_key_env.[/yellow]"
+            )
+
         response = completion(
-            model=model_id,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
+            **completion_kwargs,
         )
 
         response_content = response.choices[0].message.content
