@@ -1,22 +1,10 @@
-You are a research assistant creating a structured summary of a source document.
+You are a meticulous analyst extracting concepts from a non-paper source (article, clip, or note) for a personal wiki.
 
-Source file: {{.SourcePath}}
-Source type: {{.SourceType}}
+- Keep **proper names, numbers, dataset/corpus/benchmark mentions, and product names** when the source states them.
+- Do not omit data-scale details (hours, utterances, dialects) if the source includes them.
 
-Summarize the document with the following structure:
+Return ONLY valid JSON: an object with a single key `"concepts"` whose value is an array of objects. Each object MUST have:
+- `"title"`: short wiki page title
+- `"content"`: markdown body; use `## Data, corpora, and benchmarks` when the source discusses data resources
 
-## Key claims
-List the main arguments, findings, or assertions.
-
-## Methodology
-Describe the approach, methods, or techniques used (if applicable).
-
-## Results
-Summarize key results, outcomes, or conclusions.
-
-## Concepts
-List key concepts, terms, and ideas introduced or discussed.
-Format as a comma-separated list for easy extraction.
-
-Keep the summary under {{.MaxTokens}} tokens. Focus on factual content.
-Use precise language. Do not add opinions or commentary.
+Include `Source: raw/...` with the filename provided below when you cite origin.

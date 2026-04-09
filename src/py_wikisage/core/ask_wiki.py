@@ -26,10 +26,15 @@ def ask_with_wiki_context(question: str, config: dict) -> str:
 
     prompt = (
         "You help the user explore their personal wiki. Use the RETRIEVAL_CONTEXT below "
-        "(from a local markdown search engine). Answer the QUESTION clearly.\n"
-        "- Prefer facts supported by the context.\n"
+        "(from a local markdown search engine). Answer the QUESTION like a careful scientist.\n"
+        "- **Mine the context fully** before concluding something is absent. If the wiki describes "
+        "corpora, benchmarks, repurposed data, utterance counts, dialect coverage, or training "
+        "resources — even without a commercial-style dataset brand name — treat that as evidence "
+        "about **data / datasets** and summarize it explicitly.\n"
+        "- Prefer facts supported by the context; do not contradict the wiki without saying the "
+        "wiki is silent or ambiguous.\n"
         "- Cite wiki file paths or titles mentioned in the context when you use them.\n"
-        "- If context is insufficient, say so briefly and give a careful general answer.\n\n"
+        "- If the context is truly insufficient, say so briefly; do not invent beyond it.\n\n"
         f"RETRIEVAL_CONTEXT:\n{retrieval}\n\nQUESTION:\n{question}\n"
     )
 
