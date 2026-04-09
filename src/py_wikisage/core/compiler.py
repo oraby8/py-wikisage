@@ -20,6 +20,7 @@ from py_wikisage.core.prompts import (
     get_overview_synthesis_prompt,
     get_synthesis_prompt,
 )
+from py_wikisage.core.config import qmd_collection_name
 from py_wikisage.core.qmd_wrapper import check_qmd_installed, run_query
 from py_wikisage.core.state import is_file_processed, log_action
 from py_wikisage.core.utility import read_document
@@ -93,14 +94,15 @@ def _extract_index_candidates(wiki_dir: Path) -> list[dict]:
     return out
 
 
-def _extract_qmd_paths(result: str) -> set[str]:
+def _extract_qmd_paths(result: str, collection_name: str) -> set[str]:
     """
-    Pull wiki paths from qmd output:
-    - qmd://wiki/foo.md
+    Pull wiki-relative paths from qmd output:
+    - qmd://<collection>/foo.md
     - ... (foo.md)
     """
     found: set[str] = set()
-    for m in re.finditer(r"qmd://wiki/([^\s),]+\.md)", result):
+    esc = re.escape(collection_name)
+    for m in re.finditer(rf"qmd://{esc}/([^\s),]+\.md)", result):
         found.add(m.group(1).strip())
     for m in re.finditer(r"\(([^)\s]+\.md)\)", result):
         found.add(m.group(1).strip())
@@ -108,7 +110,11 @@ def _extract_qmd_paths(result: str) -> set[str]:
 
 
 def select_relevant_existing_pages(
-    raw_concepts: list[dict], existing_pages: list[dict], wiki_dir: Path, top_k: int = 8
+    raw_concepts: list[dict],
+    existing_pages: list[dict],
+    wiki_dir: Path,
+    top_k: int = 8,
+    config: dict | None = None,
 ) -> list[dict]:
     """
     Hybrid relevance:
@@ -117,6 +123,9 @@ def select_relevant_existing_pages(
     """
     if not raw_concepts or not existing_pages:
         return existing_pages[:top_k]
+
+    cfg = config or {}
+    qmd_coll = qmd_collection_name(cfg, wiki_dir.resolve().parent)
 
     page_by_path = {p.get("path", ""): p for p in existing_pages if p.get("path")}
     index_entries = _extract_index_candidates(wiki_dir)
@@ -148,8 +157,8 @@ def select_relevant_existing_pages(
     # qmd rerank
     if check_qmd_installed():
         for ct in concept_titles[:3]:
-            out = run_query(ct)
-            for p in _extract_qmd_paths(out):
+            out = run_query(ct, qmd_coll)
+            for p in _extract_qmd_paths(out, qmd_coll):
                 if p in score:
                     score[p] += 0.35
 
@@ -440,7 +449,7 @@ def process_raw_documents(
 
     existing_pages = load_existing_wiki_pages(wiki_dir)
     relevant_pages = select_relevant_existing_pages(
-        all_extracted_concepts, existing_pages, wiki_dir
+        all_extracted_concepts, existing_pages, wiki_dir, config=config
     )
     final_articles = synthesize_wiki_articles(
         all_extracted_concepts, config, existing_pages, relevant_pages

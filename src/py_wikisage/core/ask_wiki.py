@@ -8,15 +8,16 @@ from pathlib import Path
 from litellm import completion
 from rich.console import Console
 
+from py_wikisage.core.config import qmd_collection_name
 from py_wikisage.core.llm_utils import build_completion_kwargs
 from py_wikisage.core.qmd_wrapper import run_query
 
 console = Console()
 
-# LLM often cites qmd retrieval URIs; normalize for readable terminal markdown.
-_QMD_INLINE = re.compile(r"`qmd://wiki/([^`\s]+)`")
+# LLM cites qmd://<collection>/path; normalize for readable terminal markdown.
+_QMD_INLINE = re.compile(r"`qmd://[^/]+/([^`\s]+)`")
 _QMD_MULTILINE = re.compile(
-    r"\(\s*from\s*\n\s*`qmd://wiki/([^`]+)`\s*\)",
+    r"\(\s*from\s*\n\s*`qmd://[^/]+/([^`]+)`\s*\)",
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -30,16 +31,17 @@ def format_answer_for_terminal(answer: str) -> str:
     if not text:
         return text
     text = _QMD_MULTILINE.sub(r"(from `wiki/\1`)", text)
-    text = _QMD_INLINE.sub(r"`wiki/\1`", text)
+    text = _QMD_INLINE.sub(r"`wiki/\1`", text)  # file path still under wiki/
     return text
 
 
-def ask_with_wiki_context(question: str, config: dict) -> str:
+def ask_with_wiki_context(question: str, config: dict, project_root: Path) -> str:
     """
     Run qmd hybrid query to gather context, then ask the configured LLM to answer
     with citations to wiki paths where possible.
     """
-    retrieval = run_query(question)
+    coll = qmd_collection_name(config, project_root)
+    retrieval = run_query(question, coll)
     if not retrieval.strip():
         console.print(
             "[yellow]No retrieval text from qmd; answering with model knowledge only.[/yellow]"

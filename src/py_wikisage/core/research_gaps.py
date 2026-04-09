@@ -23,6 +23,7 @@ from py_wikisage.core.arxiv_client import (
     write_arxiv_clip,
 )
 from py_wikisage.core.compiler import _parse_json_payload, ingest_file
+from py_wikisage.core.config import qmd_collection_name
 from py_wikisage.core.llm_utils import build_completion_kwargs
 from py_wikisage.core.lint_wiki import collect_broken_wikilink_targets, run_lint
 from py_wikisage.core.prompts import get_research_gaps_prompt
@@ -356,6 +357,7 @@ def run_research_gaps(
     )
 
     if check_qmd_installed():
-        init_qmd_collection(str(wiki_dir))
-        update_qmd_index()
+        coll = qmd_collection_name(config, cwd)
+        init_qmd_collection(wiki_dir, coll)
+        update_qmd_index(coll)
     console.print("[green]research-gaps apply finished.[/green]")

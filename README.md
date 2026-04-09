@@ -32,6 +32,8 @@ This tool follows the “LLM Wiki” idea: **raw sources** stay immutable under 
 
 **Optional `research`** (for `research-gaps --sources web`): set **`web_provider: tavily`**, then either **`web_api_key_env`** (default env name `TAVILY_API_KEY`) or **`web_api_key`**.
 
+**qmd** (`search`, `query`, `ask`, indexing): optional **`qmd.collection`** names the qmd index (`qmd … -c <name>`). If unset, the default is **`<parent-folder>-<project-folder>`** (e.g. `…/gec/research` → **`gec-research`**) so common names like `research` or `wiki` do not collide with other projects in qmd’s global index. If search/query stay empty after compile, run **`qmd collection list`** and ensure your wiki path matches this project; set **`qmd.collection`** explicitly if needed. Legacy single-name **`wiki`** collection: set **`qmd.collection: wiki`** in config.
+
 Example skeleton:
 
 ```yaml
@@ -45,12 +47,16 @@ llm:
   model: gpt-4o-mini
   api_key_env: OPENAI_API_KEY
   # api_key: sk-...   # optional alternative to api_key_env
+qmd:
+  collection: null
 research:
   web_provider: null
   web_api_key_env: TAVILY_API_KEY
 ```
 
 ## qmd (optional)
+
+Per-project collection (see **`qmd.collection`** above); `init` / `compile` / `ingest` register `wiki/` under that name when qmd is installed.
 
 ```bash
 npm install -g @tobilu/qmd

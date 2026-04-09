@@ -11,7 +11,11 @@ from py_wikisage.core.ask_wiki import (
     save_answer_markdown,
 )
 from py_wikisage.core.compiler import ingest_file, process_raw_documents
-from py_wikisage.core.config import create_default_config, load_config
+from py_wikisage.core.config import (
+    create_default_config,
+    load_config,
+    qmd_collection_name,
+)
 from py_wikisage.core.lint_wiki import run_lint
 from py_wikisage.core.project_templates import ensure_agents_md
 from py_wikisage.core.qmd_wrapper import (
@@ -39,7 +43,7 @@ def init():
 
     raw_dir = cwd / "raw"
     wiki_dir = cwd / "wiki"
-    inside_raw_dir = ["assets", "papers", "repos", "articles", "experiments", "web_clips"]
+    inside_raw_dir = ["assets", "papers", "repos", "articles", "experiments", "web_clips","notes"]
 
     raw_dir.mkdir(exist_ok=True)
     wiki_dir.mkdir(exist_ok=True)
@@ -56,6 +60,16 @@ def init():
         console.print("Created [bold]AGENTS.md[/bold] (wiki schema for you and your LLM agent)")
     console.print("Created [bold]raw/[/bold] directory for source documents")
     console.print("Created [bold]wiki/[/bold] directory for generated output")
+
+    config = load_config(cwd)
+    if check_qmd_installed():
+        coll = qmd_collection_name(config, cwd)
+        console.print(
+            f"[dim]qmd: registering collection [bold]{coll}[/bold] for [bold]wiki/[/bold] …[/dim]"
+        )
+        init_qmd_collection(wiki_dir, coll)
+        update_qmd_index(coll)
+        console.print(f"[dim]qmd index ready ([bold]-c {coll}[/bold])[/dim]")
 
 
 @app.command()
@@ -81,9 +95,10 @@ def compile():
     )
 
     if check_qmd_installed():
-        console.print("[blue]Updating search index with qmd...[/blue]")
-        init_qmd_collection(str(wiki_dir))
-        update_qmd_index()
+        coll = qmd_collection_name(config, cwd)
+        console.print(f"[blue]Updating qmd collection [bold]{coll}[/bold]…[/blue]")
+        init_qmd_collection(wiki_dir, coll)
+        update_qmd_index(coll)
         console.print("[green]Compiled and indexed successfully![/green]")
     else:
         console.print(
@@ -131,8 +146,9 @@ def ingest(
     )
 
     if check_qmd_installed():
-        init_qmd_collection(str(wiki_dir))
-        update_qmd_index()
+        coll = qmd_collection_name(config, cwd)
+        init_qmd_collection(wiki_dir, coll)
+        update_qmd_index(coll)
     console.print("[green]Ingest finished.[/green]")
 
 
@@ -235,7 +251,7 @@ def ask(
         )
     )
     console.print()
-    answer = ask_with_wiki_context(question, config)
+    answer = ask_with_wiki_context(question, config, cwd)
     display = format_answer_for_terminal(answer)
     if display.strip():
         md = Markdown(display, inline_code_lexer="text")
@@ -270,8 +286,11 @@ def ask(
 def search(query: str):
     """Search the compiled wiki"""
     require_qmd()
-    console.print(f"[blue]Searching wiki for: {query}[/blue]\n")
-    output = run_search(query)
+    cwd = Path.cwd()
+    config = load_config(cwd)
+    coll = qmd_collection_name(config, cwd)
+    console.print(f"[blue]Searching collection [bold]{coll}[/bold] for: {query}[/blue]\n")
+    output = run_search(query, coll)
     print(output)
 
 
@@ -279,8 +298,11 @@ def search(query: str):
 def query(query: str):
     """Perform a semantic query against the wiki"""
     require_qmd()
-    console.print(f"[blue]Querying wiki for: {query}[/blue]\n")
-    output = run_query(query)
+    cwd = Path.cwd()
+    config = load_config(cwd)
+    coll = qmd_collection_name(config, cwd)
+    console.print(f"[blue]Querying collection [bold]{coll}[/bold] for: {query}[/blue]\n")
+    output = run_query(query, coll)
     print(output)
 
 

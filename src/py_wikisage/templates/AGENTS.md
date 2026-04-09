@@ -36,4 +36,4 @@ Subfolders under `raw/` (e.g. `papers/`, `articles/`, `repos/`, `experiments/`, 
 
 ## Install qmd (optional, recommended)
 
-Hybrid search over the wiki: `npm install -g @tobilu/qmd` (or `bun install -g @tobilu/qmd`).
+Hybrid search over the wiki: `npm install -g @tobilu/qmd` (or `bun install -g @tobilu/qmd`). Each project uses a **dedicated qmd collection name** from `config.yaml` (`qmd.collection`, defaulting to **`<parent>-<folder>`** so e.g. `gec/research` → `gec-research`) so `search` / `query` / `ask` hit this vault’s index, not another repo’s.
