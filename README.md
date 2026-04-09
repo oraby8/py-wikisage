@@ -17,8 +17,38 @@ This tool follows the “LLM Wiki” idea: **raw sources** stay immutable under 
 | `py-wikisage query "…"` | qmd semantic query (raw retrieval output) |
 | `py-wikisage ask "…"` | qmd context + LLM answer with citations; `--save notes/answer.md` to file into wiki |
 | `py-wikisage lint` | Broken `[[wikilinks]]` and orphan pages (plus index links) |
+| `py-wikisage research-gaps` | **Dry-run by default:** plan arXiv (and optional Tavily web) queries from broken wikilinks; **`--apply`** fetches into `raw/web_clips/`, then ingests like `ingest`. arXiv uses **newest submissions first**, **~3s spacing** between calls, and **retries** on 429/timeouts (60s timeout); duplicate gap targets that map to the same search string only hit the API once. Tavily uses a **past-year** time filter. Use `--llm-gaps` for extra LLM-suggested queries |
 
-Configure the model in **`config.yaml`**: `llm.provider`, `llm.model`, and `llm.api_key` or `llm.api_key_env`.
+## Config (`config.yaml`)
+
+- **Where:** In the **project root** (same directory you run `py-wikisage` from). `py-wikisage init` creates **`config.yaml`** if it is missing.
+- **How to edit:** Open the file in any text editor. It is **YAML**—use spaces for indentation, keep string values quoted if they contain special characters (`:`, `#`, etc.).
+- **When it applies:** Each CLI command **reloads** `config.yaml` from the current working directory; save the file and run the next command—no separate restart step.
+
+**LLM (required for `compile`, `ingest`, `ask`, and `research-gaps --llm-gaps`):** under **`llm`**, set **`provider`** and **`model`** (LiteLLM-style, e.g. `openai` + `gpt-4o-mini`, or another [supported provider](https://docs.litellm.ai/docs/providers)). Provide a key in one of two ways:
+
+- **`api_key_env`:** name of an environment variable that holds the secret (recommended). Example: `OPENAI_API_KEY`.
+- **`api_key`:** paste the key directly in the file (works, but avoid committing the file to git).
+
+**Optional `research`** (for `research-gaps --sources web`): set **`web_provider: tavily`**, then either **`web_api_key_env`** (default env name `TAVILY_API_KEY`) or **`web_api_key`**.
+
+Example skeleton:
+
+```yaml
+version: 1
+project: my-wiki
+sources:
+  path: raw
+output: wiki
+llm:
+  provider: openai
+  model: gpt-4o-mini
+  api_key_env: OPENAI_API_KEY
+  # api_key: sk-...   # optional alternative to api_key_env
+research:
+  web_provider: null
+  web_api_key_env: TAVILY_API_KEY
+```
 
 ## qmd (optional)
 

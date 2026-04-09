@@ -23,6 +23,19 @@ Raw Concepts:
 {concepts}
 """
 
+DEFAULT_OVERVIEW_PROMPT = """
+You are maintaining a top-level research synthesis page.
+Given existing overview text, updated concept pages, and fresh extracted concepts,
+update the overall thesis-level narrative.
+
+The output must be markdown with these sections:
+- ## Current thesis
+- ## Trend updates
+- ## Contradictions / updates
+- ## Open questions
+- ## Last updated from sources
+"""
+
 
 def _read_package_text(relative: str) -> str | None:
     """Load a UTF-8 text file from the installed py_wikisage package."""
@@ -59,3 +72,22 @@ def get_synthesis_prompt() -> str:
         return text
 
     return DEFAULT_SYNTHESIS_PROMPT
+
+
+def get_overview_synthesis_prompt() -> str:
+    """Load overview synthesis prompt or fall back to built-in default."""
+    text = _read_package_text("prompts/update_synthesis.txt")
+    if text is not None and text.strip():
+        return text
+    return DEFAULT_OVERVIEW_PROMPT
+
+
+def get_research_gaps_prompt() -> str:
+    """Prompt for optional LLM-suggested research queries (JSON)."""
+    text = _read_package_text("prompts/research_gaps.txt")
+    if text is not None and text.strip():
+        return text
+    return (
+        "Return JSON {\"queries\": [\"...\"], \"rationale\": \"...\"} with search queries "
+        "for missing wiki concepts."
+    )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from litellm import completion
@@ -11,6 +12,26 @@ from py_wikisage.core.llm_utils import build_completion_kwargs
 from py_wikisage.core.qmd_wrapper import run_query
 
 console = Console()
+
+# LLM often cites qmd retrieval URIs; normalize for readable terminal markdown.
+_QMD_INLINE = re.compile(r"`qmd://wiki/([^`\s]+)`")
+_QMD_MULTILINE = re.compile(
+    r"\(\s*from\s*\n\s*`qmd://wiki/([^`]+)`\s*\)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def format_answer_for_terminal(answer: str) -> str:
+    """
+    Prettify model output for Rich Markdown: readable wiki paths instead of qmd://
+    URIs, and fix common broken line breaks before citation backticks.
+    """
+    text = answer.strip()
+    if not text:
+        return text
+    text = _QMD_MULTILINE.sub(r"(from `wiki/\1`)", text)
+    text = _QMD_INLINE.sub(r"`wiki/\1`", text)
+    return text
 
 
 def ask_with_wiki_context(question: str, config: dict) -> str:

@@ -11,6 +11,11 @@ DEFAULT_CONFIG = {
         "model": "gpt-4o-mini",
         "api_key_env": "OPENAI_API_KEY",
     },
+    # Optional: batched web research (research-gaps). web_provider: tavily or omit.
+    "research": {
+        "web_provider": None,
+        "web_api_key_env": "TAVILY_API_KEY",
+    },
 }
 
 

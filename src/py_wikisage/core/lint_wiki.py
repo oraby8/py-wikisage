@@ -85,6 +85,46 @@ def _first_heading(text: str) -> str:
     return ""
 
 
+def _contradictions_health_issues(rel: str, text: str) -> list[str]:
+    issues: list[str] = []
+    marker = "## Contradictions / updates"
+    if marker not in text:
+        return issues
+    tail = text.split(marker, 1)[1]
+    # Limit scan to this section (until next h2/h1 marker)
+    lines: list[str] = []
+    for line in tail.splitlines():
+        if line.strip().startswith("## ") and lines:
+            break
+        lines.append(line)
+    sec = "\n".join(lines)
+    if not re.search(r"\bsource\s*:\s*", sec, flags=re.IGNORECASE) and "raw/" not in sec:
+        issues.append(
+            f"Contradictions section missing source citation in {rel}: expected 'source:' or raw/... path"
+        )
+    if not re.search(r"\b\d{4}-\d{2}-\d{2}\b", sec):
+        issues.append(
+            f"Contradictions section missing date in {rel}: expected YYYY-MM-DD entry"
+        )
+    return issues
+
+
+def _low_confidence_issue(rel: str, text: str) -> str | None:
+    vals = []
+    for m in re.finditer(r"confidence\s*=\s*([01](?:\.\d+)?)", text, flags=re.IGNORECASE):
+        try:
+            vals.append(float(m.group(1)))
+        except ValueError:
+            continue
+    low = [v for v in vals if v < 0.55]
+    if len(low) >= 3:
+        return (
+            f"Page has many low-confidence updates in {rel}: "
+            f"{len(low)} entries with confidence < 0.55"
+        )
+    return None
+
+
 def run_lint(wiki_dir: Path) -> tuple[list[str], list[str]]:
     """
     Returns (issues, info_lines) where issues are problems, info is summary stats.
@@ -149,6 +189,10 @@ def run_lint(wiki_dir: Path) -> tuple[list[str], list[str]]:
                     issues.append(
                         f"Broken wikilink in {rel!s}: [[{target}]] (no matching page)"
                     )
+        issues.extend(_contradictions_health_issues(rel, text))
+        low = _low_confidence_issue(rel, text)
+        if low:
+            issues.append(low)
 
     orphans: list[str] = []
     for path, aliases in page_resolve_keys:
@@ -167,3 +211,45 @@ def run_lint(wiki_dir: Path) -> tuple[list[str], list[str]]:
         f"Orphan pages: {len(orphans)}",
     ]
     return issues, info
+
+
+def collect_broken_wikilink_targets(wiki_dir: Path) -> list[str]:
+    """
+    Unique wikilink targets that have no matching page (same rules as run_lint).
+    Used to drive research-gap queries. Order is stable (sorted).
+    """
+    if not wiki_dir.is_dir():
+        return []
+
+    valid_keys: set[str] = set()
+    for path in wiki_dir.rglob("*.md"):
+        if is_meta_wiki_file(path, wiki_dir):
+            continue
+        aliases: set[str] = set()
+        aliases |= _expand_title_variants(path.stem)
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            text = ""
+        h1 = _first_heading(text)
+        if h1:
+            aliases |= _expand_title_variants(h1)
+        valid_keys |= aliases
+
+    seen: set[str] = set()
+    out: list[str] = []
+    for path in wiki_dir.rglob("*.md"):
+        if is_meta_wiki_file(path, wiki_dir):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for target in _link_targets(text):
+            if _expand_title_variants(target) & valid_keys:
+                continue
+            if target not in seen:
+                seen.add(target)
+                out.append(target)
+    out.sort()
+    return out

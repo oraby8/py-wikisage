@@ -1,8 +1,15 @@
 import typer
 from pathlib import Path
 from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.rule import Rule
 
-from py_wikisage.core.ask_wiki import ask_with_wiki_context, save_answer_markdown
+from py_wikisage.core.ask_wiki import (
+    ask_with_wiki_context,
+    format_answer_for_terminal,
+    save_answer_markdown,
+)
 from py_wikisage.core.compiler import ingest_file, process_raw_documents
 from py_wikisage.core.config import create_default_config, load_config
 from py_wikisage.core.lint_wiki import run_lint
@@ -15,6 +22,7 @@ from py_wikisage.core.qmd_wrapper import (
     run_query,
     require_qmd,
 )
+from py_wikisage.core.research_gaps import run_research_gaps
 from py_wikisage.core.state import log_action
 from py_wikisage.core.wiki_index import regenerate_wiki_index
 
@@ -31,7 +39,7 @@ def init():
 
     raw_dir = cwd / "raw"
     wiki_dir = cwd / "wiki"
-    inside_raw_dir = ["assets", "papers", "repos", "articles", "experiments"]
+    inside_raw_dir = ["assets", "papers", "repos", "articles", "experiments", "web_clips"]
 
     raw_dir.mkdir(exist_ok=True)
     wiki_dir.mkdir(exist_ok=True)
@@ -128,6 +136,64 @@ def ingest(
     console.print("[green]Ingest finished.[/green]")
 
 
+@app.command("research-gaps")
+def research_gaps_cmd(
+    apply: bool = typer.Option(
+        False,
+        "--apply",
+        help="Fetch sources, write raw/web_clips/*.md, and ingest each new file",
+    ),
+    max_results: int = typer.Option(
+        3,
+        "--max",
+        help="Max results per query (arXiv and web)",
+    ),
+    sources: str = typer.Option(
+        "arxiv",
+        "--sources",
+        help="Comma-separated: arxiv, web",
+    ),
+    limit_queries: int = typer.Option(
+        20,
+        "--limit-queries",
+        help="Cap number of gap queries processed",
+    ),
+    llm_gaps: bool = typer.Option(
+        False,
+        "--llm-gaps",
+        help="Ask the LLM for extra search queries (uses your LLM config)",
+    ),
+):
+    """Plan research from broken wikilinks (dry-run by default)."""
+    cwd = Path.cwd()
+    wiki_dir = cwd / "wiki"
+    raw_dir = cwd / "raw"
+    config = load_config(cwd)
+
+    parts = {p.strip().lower() for p in sources.split(",") if p.strip()}
+    allowed = {"arxiv", "web"}
+    bad = parts - allowed
+    if bad:
+        console.print(f"[red]Unknown --sources flags: {bad}. Use arxiv, web, or both.[/red]")
+        raise typer.Exit(code=1)
+    if not parts:
+        console.print("[red]At least one source is required (arxiv, web).[/red]")
+        raise typer.Exit(code=1)
+
+    run_research_gaps(
+        cwd,
+        wiki_dir,
+        raw_dir,
+        config,
+        apply=apply,
+        max_results=max_results,
+        sources=parts,
+        limit_queries=limit_queries,
+        llm_gaps=llm_gaps,
+        console=console,
+    )
+
+
 @app.command()
 def lint():
     """Check wiki for broken wikilinks and orphan pages."""
@@ -159,9 +225,38 @@ def ask(
     config = load_config(cwd)
 
     require_qmd()
-    console.print(f"[blue]Asking (wiki-backed): {question}[/blue]\n")
+    console.print()
+    console.print(
+        Panel(
+            f"[italic]{question}[/italic]",
+            title="[bold bright_blue]Question[/bold bright_blue]",
+            border_style="bright_blue",
+            padding=(0, 1),
+        )
+    )
+    console.print()
     answer = ask_with_wiki_context(question, config)
-    console.print(answer)
+    display = format_answer_for_terminal(answer)
+    if display.strip():
+        md = Markdown(display, inline_code_lexer="text")
+        console.print(
+            Panel(
+                md,
+                title="[bold green]Answer[/bold green]",
+                border_style="green",
+                padding=(0, 1),
+            )
+        )
+    else:
+        console.print("[yellow](empty response from model)[/yellow]")
+    console.print()
+    console.print(
+        Rule(
+            title="[dim]wiki paths above map to files under wiki/[/dim]",
+            style="dim",
+            characters="·",
+        )
+    )
     if save:
         try:
             out = save_answer_markdown(wiki_dir, question, answer, save)

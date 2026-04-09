@@ -1,5 +1,10 @@
 from unittest.mock import patch
-from py_wikisage.core.prompts import get_extraction_prompt, get_synthesis_prompt
+from py_wikisage.core.prompts import (
+    get_extraction_prompt,
+    get_overview_synthesis_prompt,
+    get_research_gaps_prompt,
+    get_synthesis_prompt,
+)
 
 
 @patch("py_wikisage.core.prompts._read_package_text")
@@ -33,3 +38,17 @@ def test_get_synthesis_prompt(mock_read):
     mock_read.return_value = "Synthesis Prompt"
     prompt = get_synthesis_prompt()
     assert prompt == "Synthesis Prompt"
+
+
+@patch("py_wikisage.core.prompts._read_package_text")
+def test_get_overview_synthesis_prompt(mock_read):
+    mock_read.return_value = "Overview Prompt"
+    prompt = get_overview_synthesis_prompt()
+    assert prompt == "Overview Prompt"
+
+
+@patch("py_wikisage.core.prompts._read_package_text")
+def test_get_research_gaps_prompt(mock_read):
+    mock_read.return_value = "Research gaps JSON rules"
+    prompt = get_research_gaps_prompt()
+    assert prompt == "Research gaps JSON rules"

@@ -20,5 +20,10 @@ Each array element MUST be an object with:
   - `## Results` (numbers where present)
   - `## Limitations` (if the paper states any)
   - `## See also` with `[[Wikilinks]]` to related concepts when obvious
+- `"claims"`: array of claim objects for merge logic. Each claim object should include:
+  - `"claim"`: one atomic factual claim
+  - `"evidence"`: exact supporting detail (quote or paraphrase grounded in paper)
+  - `"source"`: raw source reference using the filename provided below
+  - `"confidence"`: number in [0,1], how strongly the paper supports this claim
 
 End the first paragraph or frontmatter note with the source, e.g. `Source: raw/papers/<filename>` using the filename given below the paper text.

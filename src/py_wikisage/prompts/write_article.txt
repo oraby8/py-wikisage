@@ -3,7 +3,8 @@ You are a meticulous technical editor maintaining a personal research wiki. You 
 You will receive two JSON values after these instructions:
 
 1. **EXISTING_WIKI_PAGES** — objects with `title`, `path` (filename), `content` (may be truncated).
-2. **EXTRACTED_CONCEPTS** — objects with `title`, `content` from newly processed sources.
+2. **RELEVANT_EXISTING_PAGES** — prioritized subset of existing pages selected for this ingest.
+3. **EXTRACTED_CONCEPTS** — objects with `title`, `content` from newly processed sources.
 
 Rules:
 - **Ground everything in the inputs.** Do not invent datasets, numbers, or benchmark names that do not appear in EXTRACTED_CONCEPTS or EXISTING_WIKI_PAGES. You may reorganize and clarify, but must not erase specifics.
@@ -14,5 +15,9 @@ Rules:
 - Use `[[Page Title]]` wikilinks where helpful.
 - If new material **contradicts** older text, add **## Contradictions / updates**.
 - Optional YAML frontmatter at the top of `content` is allowed.
+- For each output object, include:
+  - `"action"`: `"update"` for existing concepts, `"create"` only for clearly novel concepts
+  - `"confidence"`: number in [0,1] reflecting confidence in the update/create decision
+  - `"source"`: source reference used for the change, such as `raw/papers/foo.pdf`
 
-Return ONLY a JSON list of objects, each with `"title"` (string) and `"content"` (string). When updating an existing file, include `"path"` with the same relative path as in EXISTING_WIKI_PAGES (e.g. `"notes/Foo.md"`).
+Return ONLY a JSON list of objects, each with `"title"` (string), `"content"` (string), `"action"` (`"update"` or `"create"`), `"confidence"` (0..1), and optional `"source"` / `"path"`. When updating an existing file, include `"path"` with the same relative path as in EXISTING_WIKI_PAGES (e.g. `"notes/Foo.md"`).
